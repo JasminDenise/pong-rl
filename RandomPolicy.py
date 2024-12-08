@@ -5,9 +5,12 @@ import gymnasium as gym
 import matplotlib.pyplot as plt
 import json
 import cv2 #OpenCV for image preprocessing
+import os
+# # Directory to save the histogram
+# save_dir = "/kaggle/working/histograms"
 
 # Initialise the environment
-env = gym.make("ALE/Pong-v5", render_mode="None") # None or human; Remove rendering during training or evaluation
+env = gym.make("ALE/Pong-v5", render_mode="rgb_array") # rgb_array or human; Remove rendering during training or evaluation
 
 # Preprocessing; source: https://www.findingtheta.com/blog/mastering-ataris-pong-with-reinforcement-learning-overcoming-sparse-rewards-and-optimizing-performance
 def preprocess_frame(frame):    
@@ -19,10 +22,10 @@ def preprocess_frame(frame):
     return normalized_frame
 
 
-# Number of episodes to run
-num_episodes = 200
-max_iter = 100
-nStepsRandom = []  # Speichern der Schritte pro Episode
+
+num_episodes = 200 # Number of episodes to run
+max_iter = 500 # Maximum steps per episode
+nStepsRandom = []  # Store the number of steps per episode
 cumulative_rewards = []  # Store cumulative rewards for each episode
 
 
@@ -34,15 +37,20 @@ for episode in range(num_episodes):
 
     for i in range(max_iter):
         # Preprocess the frame
-        preprocessed_frame = preprocess_frame(observation['image'])  # Use the image from the observation, prepocressed frames
+        preprocessed_frame = preprocess_frame(observation)  # Use the image from the observation, prepocressed frames
 
         action = env.action_space.sample()  # Random action policy that uses the observation and info
         observation, reward, terminated, truncated, info = env.step(action)
 
         episode_reward += reward # Accumulate rewards for each step in the environment
         episode_steps += 1  # Count steps in the episode
-        episode_over = terminated or truncated # Check if episode is over (timeout or game over)
 
+        # Check if the episode is over (either terminated or truncated)
+        if terminated or truncated:
+            episode_over = True
+            break  # End the loop once the episode is over
+
+    # Append the results to the lists after the episode ends
     nStepsRandom.append(episode_steps)  # Store the number of steps in this episode
     cumulative_rewards.append(episode_reward)  # Save the cumulative reward after episode is over
     print(f"Episode {episode + 1}: Cumulative reward = {episode_reward}")
@@ -62,7 +70,7 @@ plt.xlabel("Episode")
 plt.ylabel("Cumulative reward")
 plt.title("Performance of random policy")
 plt.legend()
-plt.savefig("historgrams/cumulative_rewards.jpg", format="jpg") # Save the plot as a JPEG file
+plt.savefig("cumulative_rewards.jpg", format="jpg") # Save the plot as a JPEG file
 plt.show()
 
 # Plot histogram of steps per episode
@@ -71,7 +79,7 @@ plt.xlim(0, max(nStepsRandom))
 plt.xlabel("Number of steps per episode")
 plt.ylabel("Frequency")
 plt.title("Distribution of steps per episode for random policy")
-plt.savefig("historgrams/steps_per_episode.jpg", format="jpg")  # Save the plot as a JPEG file
+plt.savefig("steps_per_episode.jpg", format="jpg")  # Save the plot as a JPEG file
 plt.show()
 
 # Save results as JSON
@@ -83,9 +91,12 @@ random_policy_results = {
     "steps_per_episode": nStepsRandom,
     "average_steps": average_steps
 }
+# Save the results to the correct path
+save_path = '/kaggle/working/random_policy_results.json'
 
 # Save the data to a JSON file for later analysis
-with open("logs/random_policy_results.json", "w") as f:
+with open(save_path, "w") as f:
     json.dump(random_policy_results, f, indent=4)
+print(f"File saved to {save_path}")
 
 print("Random policy results saved to logs/random_policy_results.json")
