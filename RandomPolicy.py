@@ -20,7 +20,8 @@ def preprocess_frame(frame):
 
 
 # Number of episodes to run
-num_episodes = 10
+num_episodes = 200
+max_iter = 100
 nStepsRandom = []  # Speichern der Schritte pro Episode
 cumulative_rewards = []  # Store cumulative rewards for each episode
 
@@ -31,7 +32,7 @@ for episode in range(num_episodes):
     episode_steps = 0  # Counter for the number of steps in each episode
     episode_over = False
 
-    while not episode_over:
+    for i in range(max_iter):
         # Preprocess the frame
         preprocessed_frame = preprocess_frame(observation['image'])  # Use the image from the observation, prepocressed frames
 
