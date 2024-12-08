@@ -5,9 +5,6 @@ import gymnasium as gym
 import matplotlib.pyplot as plt
 import json
 import cv2 #OpenCV for image preprocessing
-import os
-# # Directory to save the histogram
-# save_dir = "/kaggle/working/histograms"
 
 # Initialise the environment
 env = gym.make("ALE/Pong-v5", render_mode="rgb_array") # rgb_array or human; Remove rendering during training or evaluation
@@ -20,7 +17,6 @@ def preprocess_frame(frame):
     normalized_frame = resized_frame / 255.0    # Normalize pixel values helps neural network train more efficiently by using smaller and more consistent input values
 
     return normalized_frame
-
 
 
 num_episodes = 200 # Number of episodes to run
@@ -57,39 +53,24 @@ for episode in range(num_episodes):
 
 env.close()
 
-#Average cumulative reward to summarize the random policy's overall performance
+
+# Cumulative Reward Plot
+plt.plot(cumulative_rewards)
+plt.xlabel('Episode')
+plt.ylabel('Cumulative reward')
+plt.title('Cumulative reward over time - Random Policy')
+plt.savefig("cumulative_rewards.jpg", format="jpg", dpi=300) # Save the plot as a JPEG file
+plt.show()
+
+# #Average cumulative reward
 average_cumulative_reward = sum(cumulative_rewards) / num_episodes
-average_steps = sum(nStepsRandom) / num_episodes
-print("\n--- Performance of random policy ---")
-print(f"Average cumulative reward over {num_episodes} episodes: {average_cumulative_reward:.2f}")
-print(f"Average steps per episode: {average_steps:.2f}")
-
-# Plot histogram the cumulative reward
-plt.plot(cumulative_rewards, label="Cumulative Reward")
-plt.xlabel("Episode")
-plt.ylabel("Cumulative reward")
-plt.title("Performance of random policy")
-plt.legend()
-plt.savefig("cumulative_rewards.jpg", format="jpg") # Save the plot as a JPEG file
-plt.show()
-
-# Plot histogram of steps per episode
-plt.hist(nStepsRandom, bins=20, edgecolor="black")
-plt.xlim(0, max(nStepsRandom))
-plt.xlabel("Number of steps per episode")
-plt.ylabel("Frequency")
-plt.title("Distribution of steps per episode for random policy")
-plt.savefig("steps_per_episode.jpg", format="jpg")  # Save the plot as a JPEG file
-plt.show()
 
 # Save results as JSON
 random_policy_results = {
     "policy": "random",
-    "num_episodes": len(cumulative_rewards),
+    "num_episodes": num_episodes,
     "cumulative_rewards": cumulative_rewards,
-    "average_reward": average_cumulative_reward,
-    "steps_per_episode": nStepsRandom,
-    "average_steps": average_steps
+    "average_reward": average_cumulative_reward
 }
 # Save the results to the correct path
 save_path = '/kaggle/working/random_policy_results.json'
