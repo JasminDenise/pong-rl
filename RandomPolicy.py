@@ -61,7 +61,7 @@ env.close()
 window_size = 10 # Every 10 espiodes
 moving_avg = np.convolve(cumulative_rewards, np.ones(window_size) / window_size, mode='valid') 
 
-# Calculate win rate for random policy, should be around 50 %
+# Calculate win rate for random policy, should be 50 %
 wins = sum(1 for reward in cumulative_rewards if reward > 0)
 win_rate = wins / num_episodes * 100
 
