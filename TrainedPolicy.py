@@ -17,8 +17,8 @@ env = gym.make("ALE/Pong-v5", render_mode=None)  # Disable rendering for trainin
 env.reset(seed=42)
 
 # Set device for computation
-#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#print(f"Using device: {device}")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 
 
 # Preprocessing function
@@ -64,26 +64,18 @@ epsilon_decay = 0.99 # faster decay before it was 0.995
 replay_buffer_size = 10000
 target_update_freq = 5
 
-# Adjust hyperparameters for CPU if necessary
-#if device == torch.device("cpu"):
-  #  num_episodes = 100  # Reduce total episodes for CPU
-  #  max_iter = 200  # Reduce maximum iterations per episode
-   # print("CPU detected: Reducing episode count and max iterations for efficiency.")
-
 # Initialize model, optimizer, and replay buffer
 input_shape = (4, 84, 84) # Input shape for stacked Pong frames
 num_actions = env.action_space.n
-policy_net = DQN(input_shape, num_actions).float() #.to(device)
-target_net = DQN(input_shape, num_actions).float() #.to(device)
+policy_net = DQN(input_shape, num_actions).float().to(device)
+target_net = DQN(input_shape, num_actions).float().to(device)
 target_net.load_state_dict(policy_net.state_dict())
 target_net.eval()
 optimizer = optim.Adam(policy_net.parameters(), lr=lr)
 replay_buffer = deque(maxlen=replay_buffer_size)
 
 # Print model summary
-policy_net = DQN(input_shape, num_actions)
 torchsummary.summary(policy_net, input_size=(4, 84, 84))
-
 
 
 def select_action(state, epsilon):
@@ -91,7 +83,8 @@ def select_action(state, epsilon):
         return env.action_space.sample()
     else:
         with torch.no_grad():
-            state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+            # Move state_tensor to the correct device
+            state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(device)
             return policy_net(state_tensor).argmax().item()
 
 def optimize_model():
@@ -101,11 +94,11 @@ def optimize_model():
     batch = random.sample(replay_buffer, batch_size)
     states, actions, rewards, next_states, dones = zip(*batch)
 
-    states = torch.tensor(np.array(states), dtype=torch.float32) #.to(device)
-    actions = torch.tensor(actions, dtype=torch.int64).unsqueeze(1) #.to(device)
-    rewards = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1) #.to(device)
-    next_states = torch.tensor(np.array(next_states), dtype=torch.float32) #.to(device)
-    dones = torch.tensor(dones, dtype=torch.float32).unsqueeze(1) #.to(device)
+    states = torch.tensor(np.array(states), dtype=torch.float32).to(device)
+    actions = torch.tensor(actions, dtype=torch.int64).unsqueeze(1).to(device)
+    rewards = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1).to(device)
+    next_states = torch.tensor(np.array(next_states), dtype=torch.float32).to(device)
+    dones = torch.tensor(dones, dtype=torch.float32).unsqueeze(1).to(device)
 
     q_values = policy_net(states).gather(1, actions)
     next_q_values = target_net(next_states).max(1)[0].detach().unsqueeze(1)
@@ -136,7 +129,8 @@ for episode in range(num_episodes):
         next_state = preprocess_frame(next_state)
         next_state_stack = np.concatenate((state_stack[1:], np.expand_dims(next_state, axis=0)), axis=0)
 
-        replay_buffer.append((state_stack, action, reward, next_state_stack, terminated))
+        replay_buffer.append((state_stack, action, reward, next_state_stack, terminated or truncated))
+
         state_stack = next_state_stack
         episode_reward += reward
 
