@@ -47,7 +47,9 @@ for episode in range(num_episodes):
         episode_steps += 1  # Count steps in the episode
 
         # Check if the episode is over
-        if terminated or truncated:
+        # terminated: Episode ends due to terminal state (e.g., agent loses or wins)
+        # truncated: Episode ends due to external constraints (e.g., step limit exceeded)
+        if terminated or truncated: 
             break
 
     # Append the results to the lists after the episode ends
