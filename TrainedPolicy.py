@@ -2,12 +2,15 @@ import gymnasium as gym
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torchsummary
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import deque
 import random
 import json
 import cv2
+from ale_py import ALEInterface
+ale = ALEInterface()
 
 # Initialize environment
 env = gym.make("ALE/Pong-v5", render_mode=None)  # Disable rendering for training
@@ -48,6 +51,7 @@ class DQN(nn.Module):
         x = x.view(x.size(0), -1)
         return self.fc(x)
 
+
 # Hyperparameters
 num_episodes = 500 # Episodes to train 
 max_iter = 500 # Make sure agent has enough time to play full game
@@ -67,7 +71,7 @@ target_update_freq = 5
    # print("CPU detected: Reducing episode count and max iterations for efficiency.")
 
 # Initialize model, optimizer, and replay buffer
-input_shape = (4, 84, 84)
+input_shape = (4, 84, 84) # Input shape for stacked Pong frames
 num_actions = env.action_space.n
 policy_net = DQN(input_shape, num_actions).float() #.to(device)
 target_net = DQN(input_shape, num_actions).float() #.to(device)
@@ -75,6 +79,12 @@ target_net.load_state_dict(policy_net.state_dict())
 target_net.eval()
 optimizer = optim.Adam(policy_net.parameters(), lr=lr)
 replay_buffer = deque(maxlen=replay_buffer_size)
+
+# Print model summary
+policy_net = DQN(input_shape, num_actions)
+torchsummary.summary(policy_net, input_size=(4, 84, 84))
+
+
 
 def select_action(state, epsilon):
     if random.random() < epsilon:
