@@ -56,11 +56,11 @@ class DQN(nn.Module):
 num_episodes = 500 # Episodes to train 
 max_iter = 500 # Make sure agent has enough time to play full game
 batch_size = 32
-gamma = 0.99
-lr = 1e-4
+gamma = 0.99 # Discount factor
+lr = 1e-4 # Learning rate
 epsilon_start = 1.0
 epsilon_end = 0.1
-epsilon_decay = 0.99 # faster decay before it was 0.995
+epsilon_decay = 0.99 # Faster decay before it was 0.995
 replay_buffer_size = 10000
 target_update_freq = 5
 
@@ -80,30 +80,32 @@ torchsummary.summary(policy_net, input_size=(4, 84, 84))
 
 def select_action(state, epsilon):
     if random.random() < epsilon:
-        return env.action_space.sample()
+        return env.action_space.sample() # Exploration
     else:
         with torch.no_grad():
-            # Move state_tensor to the correct device
             state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(device)
-            return policy_net(state_tensor).argmax().item()
+            return policy_net(state_tensor).argmax().item() # Exploitation
 
 def optimize_model():
     if len(replay_buffer) < batch_size:
         return
-
+    # Sample batch of transitions from the replay buffer
     batch = random.sample(replay_buffer, batch_size)
     states, actions, rewards, next_states, dones = zip(*batch)
 
+    # Convert transitions to tensors
     states = torch.tensor(np.array(states), dtype=torch.float32).to(device)
     actions = torch.tensor(actions, dtype=torch.int64).unsqueeze(1).to(device)
     rewards = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1).to(device)
     next_states = torch.tensor(np.array(next_states), dtype=torch.float32).to(device)
     dones = torch.tensor(dones, dtype=torch.float32).unsqueeze(1).to(device)
 
+    # Calculate (target) Q-values
     q_values = policy_net(states).gather(1, actions)
     next_q_values = target_net(next_states).max(1)[0].detach().unsqueeze(1)
-    target_q_values = rewards + gamma * next_q_values * (1 - dones)
+    target_q_values = rewards + gamma * next_q_values * (1 - dones) # Bellman equation
 
+    # Update policy network
     loss = nn.MSELoss()(q_values, target_q_values)
     optimizer.zero_grad()
     loss.backward()
@@ -114,33 +116,39 @@ epsilon = epsilon_start
 cumulative_rewards_dqn = []
 
 for episode in range(num_episodes):
-    if episode % 50 == 0 and episode > 0:  # Save model every 50 episodes; before 100
+
+    # Save model every 50 episodes
+    if episode % 50 == 0 and episode > 0:  
         model_save_path = f"policy_net_episode_{episode}.pth"
         torch.save(policy_net.state_dict(), model_save_path)
         print(f"Model saved to {model_save_path}")
+
     state, _ = env.reset()
     state = preprocess_frame(state)
     state_stack = np.stack([state] * 4, axis=0)  # Initial stack of frames
     episode_reward = 0
 
     for t in range(max_iter):
+        # Select an action
         action = select_action(state_stack, epsilon)
         next_state, reward, terminated, truncated, _ = env.step(action)
         next_state = preprocess_frame(next_state)
         next_state_stack = np.concatenate((state_stack[1:], np.expand_dims(next_state, axis=0)), axis=0)
 
+        # Store tranisition in replay buffer
         replay_buffer.append((state_stack, action, reward, next_state_stack, terminated or truncated))
 
         state_stack = next_state_stack
         episode_reward += reward
-
+        
+        #Optimize model
         optimize_model()
         
         if terminated or truncated:
             break
 
     cumulative_rewards_dqn.append(episode_reward)
-    epsilon = max(epsilon_end, epsilon * epsilon_decay)
+    epsilon = max(epsilon_end, epsilon * epsilon_decay) # Epsilon decay
 
     if episode % target_update_freq == 0:
         target_net.load_state_dict(policy_net.state_dict())
