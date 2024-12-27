@@ -34,4 +34,9 @@ Based on Mnih et al. (2015). Human-level control through deep reinforcement lear
 ## Results
 The DQN agent achieves significantly better performance than a random policy with an average reward of -4.794 compared to -10.045 for the random policy.
 The agent shows a clear upward trend in cumulative rewards, indicating effective learning over time.
+![cumulative_rewards](https://github.com/user-attachments/assets/7345bf5f-43b2-41d7-9f37-82118d49111f)
+![dqn_cumulative_rewards](https://github.com/user-attachments/assets/af14be79-09a9-4522-8433-6b1b6dcc1583)
+
+
+
 
